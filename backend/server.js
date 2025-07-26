@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const fs = require('fs');
-const path = 'path';
+const path = require('path'); // Corrected: require 'path' module
 const csv = require('csv-parser');
 
 // Initialize Express app
@@ -20,6 +20,10 @@ let orderItems = [];
 // --- Helper function to load CSV data ---
 const loadCSVData = (filePath, dataArray) => {
     return new Promise((resolve, reject) => {
+        // Check if file exists before trying to read
+        if (!fs.existsSync(filePath)) {
+            return reject(new Error(`File not found at: ${filePath}`));
+        }
         fs.createReadStream(filePath)
             .pipe(csv())
             .on('data', (row) => dataArray.push(row))
@@ -35,7 +39,7 @@ const loadCSVData = (filePath, dataArray) => {
 
 const getTopSellingProducts = (n = 5) => {
     if (orderItems.length === 0 || products.length === 0) {
-        return "Sorry, product data is still loading. Please try again in a moment.";
+        return "Sorry, product data is still loading or could not be found. Please try again in a moment.";
     }
 
     const productCounts = orderItems.reduce((acc, item) => {
@@ -61,7 +65,7 @@ const getTopSellingProducts = (n = 5) => {
 
 const getOrderStatus = (orderId) => {
     if (orders.length === 0) {
-        return "Sorry, order data is still loading. Please try again in a moment.";
+        return "Sorry, order data is still loading or could not be found. Please try again in a moment.";
     }
     const order = orders.find(o => o.order_id === orderId);
     return order ? `The status for order ID ${orderId} is: ${order.status}.` : `Sorry, I could not find any information for order ID ${orderId}.`;
@@ -93,12 +97,14 @@ app.post('/api/chat', (req, res) => {
 app.listen(port, async () => {
     console.log(`Server is running on http://localhost:${port}`);
     try {
-        // Correct paths assuming 'data' folder is in the project root, one level above 'backend'
-        await loadCSVData('../data/products.csv', products);
-        await loadCSVData('../data/orders.csv', orders);
-        await loadCSVData('../data/order_items.csv', orderItems);
+        // *** CORRECTED FILE PATHS ***
+        const dataBasePath = '../data/archive/archive';
+        await loadCSVData(path.join(dataBasePath, 'products.csv'), products);
+        await loadCSVData(path.join(dataBasePath, 'orders.csv'), orders);
+        await loadCSVData(path.join(dataBasePath, 'order_items.csv'), orderItems);
         console.log('All data loaded and ready.');
     } catch (error) {
         console.error('Failed to load CSV data:', error);
+        console.error("Please ensure the CSV files exist at 'chatbot/data/archive/archive/'");
     }
 });
